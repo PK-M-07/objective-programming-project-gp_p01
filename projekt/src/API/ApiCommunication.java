@@ -19,6 +19,7 @@ public class ApiCommunication{
     private final String URL_CURRENT = "https://api.openweathermap.org/geo/1.0/direct?q=London&limit=1&appid=0de6d7fd015e1159acf4e42b2489df68";
     // do poprawy
     private final String URL_FORECAST = "";
+
     private final String URL_HISTORY = "";
 
     // Dane do komunikacji z OpenWeatherAPI.
