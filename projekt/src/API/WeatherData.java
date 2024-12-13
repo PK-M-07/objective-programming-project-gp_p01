@@ -4,7 +4,6 @@ import java.util.List;
 
 // Klasa reprezentująca dane pogodowe, mapowana z odpowiedzi JSON od OpenWeatherMap
 public class WeatherData {
-    
 
     // Nazwa lokalizacji (miasto)
     private String name;
