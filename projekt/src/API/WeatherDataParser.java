@@ -14,5 +14,6 @@ public class WeatherDataParser {
         WeatherData weatherData = objectMapper.readValue(json, WeatherData.class);
 
         return weatherData;
+
     }
 }
