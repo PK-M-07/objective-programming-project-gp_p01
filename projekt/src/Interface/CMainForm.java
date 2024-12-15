@@ -3,6 +3,7 @@ package Interface;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.ResourceBundle;
@@ -31,7 +32,11 @@ public class CMainForm {
     private JLabel chartLabel;
     private JPanel chart;
 
+    //klasa z api
+    //private WeatherData weatherData;
+
     public CMainForm() {
+        //weatherData = new WeatherData();  // inicjalizacja klasy z API
         ResourceBundle bundle = ResourceBundle.getBundle("messages");
 
         // Ustawienie tesktów z pliku zasobów
@@ -40,11 +45,12 @@ public class CMainForm {
         weatherLabel.setText(bundle.getString("weatherLabel"));
 
         // Inicjalizacja głównego panelu
+        mainPanel = new JPanel();
         mainPanel.setLayout(new BorderLayout(10, 10));
         mainPanel.setPreferredSize(new Dimension(360, 640)); // px
 
         // Górny panel z miastem, temperaturą i pogodą
-        JPanel topPanel = new JPanel();
+        topPanel = new JPanel();
         topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
         topPanel.setBorder(BorderFactory.createEmptyBorder(20, 10, 5, 10));
 
@@ -62,6 +68,7 @@ public class CMainForm {
         mainPanel.add(topPanel, BorderLayout.NORTH);
 
         // panel pogodowy: wilgotność, ciśnienie, wiatr, szansa na opady
+        weatherDataPanel = new JPanel();
         weatherDataPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 10));
         weatherDataPanel.setPreferredSize(new Dimension(360, 200));
 
@@ -84,6 +91,7 @@ public class CMainForm {
         weatherDataPanel.repaint();
 
         // Wybór dni do wykresu
+        chartOptionsPanel = new JPanel();
         chartOptionsPanel.setLayout(new BoxLayout(chartOptionsPanel, BoxLayout.Y_AXIS));
         chartOptionsPanel.setPreferredSize(new Dimension(360, 150));
 
@@ -98,6 +106,7 @@ public class CMainForm {
         chartOptionsPanel.add(tempHistoryComboBox);
 
         // Wykres zmiany temperatury
+        chartPanel = new JPanel();
         chartPanel.setPreferredSize(new Dimension(360, 200));
         chartPanel.setBackground(Color.LIGHT_GRAY);
         chartPanel.setBorder(BorderFactory.createTitledBorder("Wykres temperatury"));
@@ -112,13 +121,18 @@ public class CMainForm {
         mainPanel.add(southPanel, BorderLayout.SOUTH);
 
         // Panel do wyszukiwania miasta
+        searchPanel = new JPanel();
         searchPanel.setLayout(new FlowLayout(FlowLayout.CENTER));
         searchField.setColumns(15);
         searchButton.setText("Szukaj");
 
         searchButton.addActionListener((ActionEvent e) -> {
-            String city = searchField.getText();
-            updateWeatherData(city);
+            String city = searchField.getText().trim();
+            if (!city.isEmpty()) {
+                //fetchWeatherData(city);
+            } else {
+                JOptionPane.showMessageDialog(mainPanel, "Proszę wprowadzić nazwę miasta!", "Błąd", JOptionPane.ERROR_MESSAGE);
+            }
         });
 
         searchPanel.add(searchField);
@@ -129,6 +143,11 @@ public class CMainForm {
 
     // Metoda do aktualizacji pogody na podstawie miasta
     private void updateWeatherData(String city) {
+        try {
+            // Pobieramy dane z API na podstawie wprowadzonego miasta
+            //WeatherData weatherData = weatherAPI.getWeatherByCity(city);
+
+        // Jeśli dane zostały pobrane, aktualizujemy UI
         cityLabel.setText("Lokalizacja: " + city);
         temperatureLabel.setText("Temperatura: 20°C");
         weatherLabel.setText("Pogoda: Słonecznie");
@@ -136,6 +155,19 @@ public class CMainForm {
         pressureLabel.setText("Ciśnienie: 1015 hPa");
         windSpeedLabel.setText("Wiatr: 12 km/h NE");
         rainChanceLabel.setText("Szansa na opady: 30%");
+
+        } catch (IOException e) {
+            showError("Błąd połączenia z serwerem. Spróbuj ponownie.");
+        } catch (Exception e) {
+            showError("Nie znaleziono danych dla podanego miasta.");
+        }
+    }
+
+    // Obsługa błędów
+    private void showError(String message) {
+        SwingUtilities.invokeLater(() -> {
+            JOptionPane.showMessageDialog(mainPanel, message, "Błąd", JOptionPane.ERROR_MESSAGE);
+        });
     }
 
     public JPanel getMainPanel() {
