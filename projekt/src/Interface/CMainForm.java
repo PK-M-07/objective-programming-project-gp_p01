@@ -143,10 +143,10 @@ public class CMainForm {
 
     // Metoda do aktualizacji pogody na podstawie miasta
     private void updateWeatherData(String city) {
-        try {
+        /*try {
             // Pobieramy dane z API na podstawie wprowadzonego miasta
-            //WeatherData weatherData = weatherAPI.getWeatherByCity(city);
-
+            WeatherData weatherData = weatherAPI.getWeatherByCity(city);
+        */
         // Jeśli dane zostały pobrane, aktualizujemy UI
         cityLabel.setText("Lokalizacja: " + city);
         temperatureLabel.setText("Temperatura: 20°C");
@@ -155,12 +155,12 @@ public class CMainForm {
         pressureLabel.setText("Ciśnienie: 1015 hPa");
         windSpeedLabel.setText("Wiatr: 12 km/h NE");
         rainChanceLabel.setText("Szansa na opady: 30%");
-
+        /*
         } catch (IOException e) {
             showError("Błąd połączenia z serwerem. Spróbuj ponownie.");
         } catch (Exception e) {
             showError("Nie znaleziono danych dla podanego miasta.");
-        }
+        }*/
     }
 
     // Obsługa błędów
