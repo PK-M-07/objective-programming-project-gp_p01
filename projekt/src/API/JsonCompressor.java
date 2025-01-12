@@ -24,5 +24,7 @@ public class JsonCompressor {
             throw new IllegalArgumentException("Obiekt do serializacji nie może być null");
         }
         return objectMapper.writeValueAsString(object);
+
     }
+
 }

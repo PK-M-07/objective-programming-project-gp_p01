@@ -18,7 +18,7 @@ public class ApiCommunication{
 
     private final String URL_CURRENT = "https://api.weatherapi.com/v1/current.json?key=8b87ed58de2945a6876205648232812&q={location}&lang=pl&aqi=no";
     private final String URL_FORECAST = "https://api.weatherapi.com/v1/forecast.json?key=8b87ed58de2945a6876205648232812&q={location}&days={numberOfDay}&dt={dateOfDay}&hour={hourOfDay}&lang=pl&aqi=no&alerts=no";
-    private final String URL_HISTORY = "https://api.weatherapi.com/v1/history.json?key=8b87ed58de2945a6876205648232812&q={location}&dt={date}&hour={hourOfDay}&lang=pl&aqi=no";
+    private final String URL_HISTORY = "https://api.weatherapi.com/v1/history.json?key=8b87ed58de2945a6876205648232812&q={location}&dt=2025-01-10&hour={hourOfDay}&lang=pl&aqi=no";
 
     // Dane do komunikacji z OpenWeatherAPI.
 
@@ -101,6 +101,8 @@ public class ApiCommunication{
         else{
             url = new URL(URL_CURRENT.replace("{location}", locationLatitude + "," + locationLongitude));
         }
+        // Dodanie logowania URL
+        System.out.println("Generowany URL: " + url.toString());
 
         HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
         connection.setRequestMethod("GET");
