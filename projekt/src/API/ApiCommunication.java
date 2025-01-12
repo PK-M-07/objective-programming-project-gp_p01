@@ -16,10 +16,9 @@ public class ApiCommunication{
 
     // aktualna pogoda, prognoza pogody oraz historia pogody
 
-    private final String URL_CURRENT = "https://api.openweathermap.org/geo/1.0/direct?q=London&limit=1&appid=0de6d7fd015e1159acf4e42b2489df68";
-    // do poprawy
-    private final String URL_FORECAST = "";
-    private final String URL_HISTORY = "https://api.openweathermap.org/geo/1.0/";
+    private final String URL_CURRENT = "https://api.weatherapi.com/v1/current.json?key=8b87ed58de2945a6876205648232812&q={location}&lang=pl&aqi=no";
+    private final String URL_FORECAST = "https://api.weatherapi.com/v1/forecast.json?key=8b87ed58de2945a6876205648232812&q={location}&days={numberOfDay}&dt={dateOfDay}&hour={hourOfDay}&lang=pl&aqi=no&alerts=no";
+    private final String URL_HISTORY = "https://api.weatherapi.com/v1/history.json?key=8b87ed58de2945a6876205648232812&q={location}&dt={date}&hour={hourOfDay}&lang=pl&aqi=no";
 
     // Dane do komunikacji z OpenWeatherAPI.
 

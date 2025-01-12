@@ -3,7 +3,6 @@ package Interface;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.ResourceBundle;
