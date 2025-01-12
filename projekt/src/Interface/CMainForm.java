@@ -1,11 +1,20 @@
 package Interface;
 
+import API.ApiCommunication;
+import API.WeatherData;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.ResourceBundle;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartPanel;
+import org.jfree.chart.JFreeChart;
+import org.jfree.data.category.DefaultCategoryDataset;
 
 public class CMainForm {
     public JPanel mainPanel;
@@ -31,7 +40,7 @@ public class CMainForm {
     private JLabel chartLabel;
     private JPanel chart;
 
-    //klasa z api
+    private ApiCommunication apiCommunication;
     //private WeatherData weatherData;
 
     public CMainForm() {
@@ -44,12 +53,10 @@ public class CMainForm {
         weatherLabel.setText(bundle.getString("weatherLabel"));
 
         // Inicjalizacja głównego panelu
-        mainPanel = new JPanel();
         mainPanel.setLayout(new BorderLayout(10, 10));
         mainPanel.setPreferredSize(new Dimension(360, 640)); // px
 
         // Górny panel z miastem, temperaturą i pogodą
-        topPanel = new JPanel();
         topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
         topPanel.setBorder(BorderFactory.createEmptyBorder(20, 10, 5, 10));
 
@@ -67,7 +74,6 @@ public class CMainForm {
         mainPanel.add(topPanel, BorderLayout.NORTH);
 
         // panel pogodowy: wilgotność, ciśnienie, wiatr, szansa na opady
-        weatherDataPanel = new JPanel();
         weatherDataPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 10));
         weatherDataPanel.setPreferredSize(new Dimension(360, 200));
 
@@ -90,22 +96,36 @@ public class CMainForm {
         weatherDataPanel.repaint();
 
         // Wybór dni do wykresu
-        chartOptionsPanel = new JPanel();
         chartOptionsPanel.setLayout(new BoxLayout(chartOptionsPanel, BoxLayout.Y_AXIS));
         chartOptionsPanel.setPreferredSize(new Dimension(360, 150));
 
         daysLabel.setText("Wybierz kolejne dni do wykresu:");
-        daysComboBox.setModel(new DefaultComboBoxModel<>(new String[] { "3 dni", "5 dni", "7 dni" }));
+        String[] forecastDays = new String[]{"3 dni", "5 dni", "8 dni"};
+        daysComboBox.setModel(new DefaultComboBoxModel<>(forecastDays));
         tempHistoryLabel.setText("Wybierz zakres minionych dni:");
-        tempHistoryComboBox.setModel(new DefaultComboBoxModel<>(new String[] { "3 dni", "5 dni", "7 dni" }));
+        String[] historyDays = new String[]{"3 dni", "5 dni", "7 dni"};
+        tempHistoryComboBox.setModel(new DefaultComboBoxModel<>(historyDays));
 
         chartOptionsPanel.add(daysLabel);
         chartOptionsPanel.add(daysComboBox);
         chartOptionsPanel.add(tempHistoryLabel);
         chartOptionsPanel.add(tempHistoryComboBox);
 
+        /*
+        daysComboBox.addActionListener(e -> {
+            String selectedDays = (String) daysComboBox.getSelectedItem();
+            int days = Integer.parseInt(selectedDays.split(" ")[0]);
+
+            // Pobieranie danych dla okreslonej liczny dni
+            double[] temperatures = apiCommunication.getTemperatureForecast(days);
+            String[] daysLabels = generateDayLabels(days);
+
+            // Rysuj wykres
+            createChart(temperatures, daysLabels);
+        });
+        */
+
         // Wykres zmiany temperatury
-        chartPanel = new JPanel();
         chartPanel.setPreferredSize(new Dimension(360, 200));
         chartPanel.setBackground(Color.LIGHT_GRAY);
         chartPanel.setBorder(BorderFactory.createTitledBorder("Wykres temperatury"));
@@ -120,17 +140,32 @@ public class CMainForm {
         mainPanel.add(southPanel, BorderLayout.SOUTH);
 
         // Panel do wyszukiwania miasta
-        searchPanel = new JPanel();
         searchPanel.setLayout(new FlowLayout(FlowLayout.CENTER));
         searchField.setColumns(15);
         searchButton.setText("Szukaj");
 
-        searchButton.addActionListener((ActionEvent e) -> {
-            String city = searchField.getText().trim();
+        // Obsługa przycisku "Szukaj"
+        searchButton.addActionListener(e -> {
+            String city = searchField.getText();
             if (!city.isEmpty()) {
-                //fetchWeatherData(city);
-            } else {
-                JOptionPane.showMessageDialog(mainPanel, "Proszę wprowadzić nazwę miasta!", "Błąd", JOptionPane.ERROR_MESSAGE);
+                // Tworzenie obiektu ApiCommunication dla podanej lokalizacji
+                apiCommunication = new ApiCommunication(city);
+
+                try {
+                    // Pobieranie danych o aktualnej pogodzie
+                    String jsonResponse = apiCommunication.getCurrentWeather();
+
+                    // Parsowanie odpowiedzi JSON na obiekt WeatherData
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    WeatherData weatherData = objectMapper.readValue(jsonResponse, WeatherData.class);
+
+                    // Aktualizowanie komponentów UI na podstawie pobranych danych
+                    updateWeatherData(weatherData);
+
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    JOptionPane.showMessageDialog(null, "Błąd podczas pobierania danych pogodowych.");
+                }
             }
         });
 
@@ -140,18 +175,41 @@ public class CMainForm {
         mainPanel.add(searchPanel, BorderLayout.PAGE_END);
     }
 
-    // Metoda do aktualizacji pogody na podstawie miasta
-    private void updateWeatherData(String city) {
-        /*try {
-            // Pobieramy dane z API na podstawie wprowadzonego miasta
-            WeatherData weatherData = weatherAPI.getWeatherByCity(city);
-        */
-        // Jeśli dane zostały pobrane, aktualizujemy UI
-        cityLabel.setText("Lokalizacja: " + city);
-        temperatureLabel.setText("Temperatura: 20°C");
-        weatherLabel.setText("Pogoda: Słonecznie");
-        humidityLabel.setText("Wilgotność: 55%");
-        pressureLabel.setText("Ciśnienie: 1015 hPa");
+    // metoda do rysowanaia wykresu
+    public void createChart(double[] temperatures, String[] days) {
+        // Tworzenie zbioru danych
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+
+        for (int i = 0; i < temperatures.length; i++) {
+            dataset.addValue(temperatures[i], "Temperatura", days[i]);
+        }
+
+        // Tworzenie wykresu
+        JFreeChart lineChart = ChartFactory.createLineChart(
+                "Wykres temperatury", // Tytuł wykresu
+                "Dni",               // Oś X
+                "Temperatura (°C)",  // Oś Y
+                dataset              // Dane
+        );
+
+        // Panel z wykresem
+        ChartPanel chartPanelComponent = new ChartPanel(lineChart);
+        chartPanelComponent.setPreferredSize(new Dimension(360, 200));
+
+        // Czyszczenie panelu i dodanie wykresu
+        chartPanel.removeAll();
+        chartPanel.add(chartPanelComponent);
+        chartPanel.revalidate();
+        chartPanel.repaint();
+    }
+
+    // Metoda do aktualizacji pogody na podstawie WeatherData
+    private void updateWeatherData(WeatherData weatherData) {
+        cityLabel.setText("Lokalizacja: " + weatherData.getName());
+        temperatureLabel.setText("Temperatura: " + weatherData.getMain().getTemp() + "°C");
+        weatherLabel.setText("Pogoda: " + weatherData.getWeather().get(0).getDescription());
+        humidityLabel.setText("Wilgotność: " + weatherData.getMain().getHumidity() + "%");
+        pressureLabel.setText("Ciśnienie: " + weatherData.getMain().getPressure() + " hPa");
         windSpeedLabel.setText("Wiatr: 12 km/h NE");
         rainChanceLabel.setText("Szansa na opady: 30%");
         /*
@@ -164,9 +222,7 @@ public class CMainForm {
 
     // Obsługa błędów
     private void showError(String message) {
-        SwingUtilities.invokeLater(() -> {
-            JOptionPane.showMessageDialog(mainPanel, message, "Błąd", JOptionPane.ERROR_MESSAGE);
-        });
+        SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainPanel, message, "Błąd", JOptionPane.ERROR_MESSAGE));
     }
 
     public JPanel getMainPanel() {
@@ -181,14 +237,24 @@ public class CMainForm {
         TimerTask updateTask = new TimerTask() {
             @Override
             public void run() {
-                String newLocation = getCityFromCoordinates(); // Pobranie nowej lokalizacji
-                String newTemperature = getTemperature(); // Pobranie nowej temperatury
+                try {
+                    String city = getCityFromCoordinates(); // Pobranie nowej lokalizacji
+                    String newTemperature = getTemperature(); // Pobranie nowej temperatury
+                    apiCommunication = new ApiCommunication(city);
 
-                // Aktualizacja etykiet
-                SwingUtilities.invokeLater(() -> {
-                    cityLabel.setText(newLocation);
-                    temperatureLabel.setText(newTemperature + "°C");
-                });
+                    /*
+                    // Pobierz dane z API
+                    String jsonResponse = apiCommunication.getCurrentWeather();
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    WeatherData weatherData = objectMapper.readValue(jsonResponse, WeatherData.class);
+
+                    // Aktualizacja etykiet
+                    SwingUtilities.invokeLater(() -> updateWeatherData(weatherData));
+
+                    */
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
         };
 
