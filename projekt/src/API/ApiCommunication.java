@@ -6,27 +6,29 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.time.LocalDate;
 import java.util.HashMap;
-
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
 import javax.net.ssl.HttpsURLConnection;
 
 
 // Klasa do komunikacji z OpenWeatherAPI
-
 public class ApiCommunication{
 
-    // aktualna pogoda, prognoza pogody oraz historia pogody
-
-    private final String URL_CURRENT = "https://api.weatherapi.com/v1/current.json?key=8b87ed58de2945a6876205648232812&q={location}&lang=pl&aqi=no";
-    private final String URL_FORECAST = "https://api.weatherapi.com/v1/forecast.json?key=8b87ed58de2945a6876205648232812&q={location}&days={numberOfDay}&dt={dateOfDay}&hour={hourOfDay}&lang=pl&aqi=no&alerts=no";
-    private final String URL_HISTORY = "https://api.weatherapi.com/v1/history.json?key=8b87ed58de2945a6876205648232812&q={location}&dt=2025-01-10&hour={hourOfDay}&lang=pl&aqi=no";
+    private static final String API_KEY = "d213bc64cbb74aa290a110104251401"; // klucz API
+    private static final String BASE_URL = "https://api.weatherapi.com/v1/";
 
     // Dane do komunikacji z OpenWeatherAPI.
-
     private String locationName;
     private String locationLatitude;
     private String locationLongitude;
     private String date;
     private String time;
+    private final Gson gson = new Gson(); // Inicjalizacja Gson
+    private String city;
 
     // konstruktor klasy
     public ApiCommunication(String locationName){
@@ -51,7 +53,7 @@ public class ApiCommunication{
         this.time = time;
     }
 
-
+    /*
     // obliczanie liczby dni między dniem aktualnym a dniem podanym w parametrze
 
     private String numberOfDays(){
@@ -89,37 +91,141 @@ public class ApiCommunication{
         }
         return translatedLocationName;
     }
+    */
 
+    // Metoda do generowania URL na podstawie typu żądania
+    private String getWeatherUrl(String endpoint) throws UnsupportedEncodingException {
+        String location = (locationName != null) ? URLEncoder.encode(locationName, "UTF-8") : locationLatitude + "," + locationLongitude;
+        return BASE_URL + endpoint + "?key=" + API_KEY + "&q=" + location + "&lang=pl&aqi=no";
+    }
 
     // pobieranie danych o aktualnej pogodzie
+    public JsonObject getCurrentWeather() throws IOException, JsonSyntaxException {
+        URL url = new URL(getWeatherUrl("current.json"));
+        System.out.println("Requesting URL: " + url.toString());
 
-    public String getCurrentWeather() throws IOException{
-        URL url;
-        if(locationName != null){
-            url = new URL(URL_CURRENT.replace("{location}", locationNameTranslation()));
-        }
-        else{
-            url = new URL(URL_CURRENT.replace("{location}", locationLatitude + "," + locationLongitude));
-        }
-        // Dodanie logowania URL
-        System.out.println("Generowany URL: " + url.toString());
+        String jsonResponse = fetchDataFromApi(url);
+        System.out.println("API Response: " + jsonResponse);
 
+        if (jsonResponse.contains("error") || jsonResponse.contains("404")) {
+            throw new IOException("Błąd w odpowiedzi API: " + jsonResponse);
+        }
+
+        return JsonParser.parseString(jsonResponse).getAsJsonObject();
+    }
+
+    // Dane do zbuforowanej odpowiedzi
+    private JsonObject cachedCurrentWeather;
+
+    public JsonObject getCachedCurrentWeather() throws IOException {
+        if (cachedCurrentWeather == null) {
+            cachedCurrentWeather = getCurrentWeather();
+        }
+        return cachedCurrentWeather;
+    }
+
+    // Metody do pobierania specyficznych danych pogodowych
+    public double getTemperature() throws IOException, JsonSyntaxException {
+        JsonObject currentWeather = getCurrentWeather();
+        if (currentWeather.has("current")) {
+            return currentWeather.getAsJsonObject("current").get("temp_c").getAsDouble();
+        }
+        throw new JsonSyntaxException("Brak danych o temperaturze");
+    }
+
+    public String getWeatherCondition() throws IOException, JsonSyntaxException {
+        JsonObject currentWeather = getCurrentWeather();
+        if (currentWeather.has("current")) {
+            return currentWeather.getAsJsonObject("current").getAsJsonObject("condition").get("text").getAsString();
+        }
+        throw new JsonSyntaxException("Brak danych o warunkach pogodowych");
+    }
+
+    public double getPrecipitation() throws IOException, JsonSyntaxException {
+        JsonObject currentWeather = getCurrentWeather();
+        if (currentWeather.has("current")) {
+            return currentWeather.getAsJsonObject("current").get("precip_mm").getAsDouble();
+        }
+        throw new JsonSyntaxException("Brak danych o opadach");
+    }
+
+    public double getWindSpeed() throws IOException, JsonSyntaxException {
+        JsonObject currentWeather = getCurrentWeather();
+        if (currentWeather.has("current")) {
+            return currentWeather.getAsJsonObject("current").get("wind_kph").getAsDouble();
+        }
+        throw new JsonSyntaxException("Brak danych o wietrze");
+    }
+
+    public double getPressure() throws IOException, JsonSyntaxException {
+        JsonObject currentWeather = getCurrentWeather();
+        if (currentWeather.has("current")) {
+            return currentWeather.getAsJsonObject("current").get("pressure_mb").getAsDouble();
+        }
+        throw new JsonSyntaxException("Brak danych o ciśnieniu");
+    }
+
+    public int getHumidity() throws IOException, JsonSyntaxException {
+        JsonObject currentWeather = getCurrentWeather();
+        if (currentWeather.has("current")) {
+            return currentWeather.getAsJsonObject("current").get("humidity").getAsInt();
+        }
+        throw new JsonSyntaxException("Brak danych o wilgotności");
+    }
+
+    // Pobieranie prognozy pogody
+    public JsonObject getForecastWeather(int days) throws IOException, JsonSyntaxException {
+        URL url = new URL(getWeatherUrl("forecast.json") + "&days=" + days);
+        String jsonResponse = fetchDataFromApi(url);
+
+        // Parsowanie JSON do JsonObject
+        return JsonParser.parseString(jsonResponse).getAsJsonObject();
+    }
+
+    // Pobieranie danych o historii
+    public JsonObject getHistoryWeather() throws IOException, JsonSyntaxException {
+        URL url = new URL(getWeatherUrl("history.json") + "&dt=" + date);
+        String jsonResponse = fetchDataFromApi(url);
+
+        // Parsowanie JSON do JsonObject
+        return JsonParser.parseString(jsonResponse).getAsJsonObject();
+    }
+
+    public String getCity() {
+        return this.city;
+    }
+
+    private String fetchDataFromApi(URL url) throws IOException {
         HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
         connection.setRequestMethod("GET");
 
-        try(BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(connection.getInputStream()))){
+        int responseCode = connection.getResponseCode();
+        if (responseCode != 200) {
+            // Wydrukuj odpowiedź w przypadku błędu
+            String errorResponse;
+            try (BufferedReader errorReader = new BufferedReader(new InputStreamReader(connection.getErrorStream()))) {
+                StringBuilder errorBuilder = new StringBuilder();
+                String line;
+                while ((line = errorReader.readLine()) != null) {
+                    errorBuilder.append(line);
+                }
+                errorResponse = errorBuilder.toString();
+            }
+            throw new IOException("Błąd serwera: " + responseCode + " Odpowiedź: " + errorResponse);
+        }
+
+        try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
             StringBuilder stringBuilder = new StringBuilder();
             String line;
-            while((line = bufferedReader.readLine()) != null){
+            while ((line = bufferedReader.readLine()) != null) {
                 stringBuilder.append(line);
             }
             return stringBuilder.toString();
         }
     }
 
-
+    /*
     // pobieranie danych o prognozie pogody
-
     public String getForecastWeather() throws IOException{
         URL url;
         String replacedUrl;
@@ -152,9 +258,6 @@ public class ApiCommunication{
         }
     }
 
-
-
-
     //pobieranie danych o historii
 
     public String getHistoryWeather() throws IOException{
@@ -186,4 +289,5 @@ public class ApiCommunication{
             return stringBuilder.toString();
         }
     }
+     */
 }

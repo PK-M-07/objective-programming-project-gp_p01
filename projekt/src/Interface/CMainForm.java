@@ -11,6 +11,8 @@ import java.awt.event.ActionListener;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.ResourceBundle;
+
+import com.google.gson.JsonObject;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -150,22 +152,7 @@ public class CMainForm {
             if (!city.isEmpty()) {
                 // Tworzenie obiektu ApiCommunication dla podanej lokalizacji
                 apiCommunication = new ApiCommunication(city);
-
-                try {
-                    // Pobieranie danych o aktualnej pogodzie
-                    String jsonResponse = apiCommunication.getCurrentWeather();
-
-                    // Parsowanie odpowiedzi JSON na obiekt WeatherData
-                    ObjectMapper objectMapper = new ObjectMapper();
-                    WeatherData weatherData = objectMapper.readValue(jsonResponse, WeatherData.class);
-
-                    // Aktualizowanie komponentów UI na podstawie pobranych danych
-                    updateWeatherData(weatherData);
-
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                    JOptionPane.showMessageDialog(null, "Błąd podczas pobierania danych pogodowych.");
-                }
+                updateWeatherData();
             }
         });
 
@@ -204,20 +191,92 @@ public class CMainForm {
     }
 
     // Metoda do aktualizacji pogody na podstawie WeatherData
-    private void updateWeatherData(WeatherData weatherData) {
-        cityLabel.setText("Lokalizacja: " + weatherData.getName());
-        temperatureLabel.setText("Temperatura: " + weatherData.getMain().getTemp() + "°C");
-        weatherLabel.setText("Pogoda: " + weatherData.getWeather().get(0).getDescription());
-        humidityLabel.setText("Wilgotność: " + weatherData.getMain().getHumidity() + "%");
-        pressureLabel.setText("Ciśnienie: " + weatherData.getMain().getPressure() + " hPa");
-        windSpeedLabel.setText("Wiatr: 12 km/h NE");
-        rainChanceLabel.setText("Szansa na opady: 30%");
-        /*
-        } catch (IOException e) {
-            showError("Błąd połączenia z serwerem. Spróbuj ponownie.");
-        } catch (Exception e) {
-            showError("Nie znaleziono danych dla podanego miasta.");
-        }*/
+    private void updateWeatherData() {
+        try {
+            // Pobieranie danych o aktualnej pogodzie
+            JsonObject jsonResponseObject = apiCommunication.getCurrentWeather();
+
+            // Sprawdzenie, czy "location" istnieje w odpowiedzi
+            if (jsonResponseObject.has("location") && !jsonResponseObject.get("location").isJsonNull()) {
+                JsonObject locationObject = jsonResponseObject.getAsJsonObject("location");
+                if (locationObject.has("name") && !locationObject.get("name").isJsonNull()) {
+                    String cityName = locationObject.get("name").getAsString();
+                    cityLabel.setText("Lokalizacja: " + cityName);
+                } else {
+                    showError("Brak danych o nazwie miasta.");
+                }
+            } else {
+                showError("Brak danych o lokalizacji.");
+                return;
+            }
+
+            if (jsonResponseObject.has("current") && !jsonResponseObject.get("current").isJsonNull()) {
+                JsonObject currentObject = jsonResponseObject.getAsJsonObject("current");
+                if (currentObject.has("temp_c") && !currentObject.get("temp_c").isJsonNull()) {
+                    double temperature = currentObject.get("temp_c").getAsDouble();
+                    temperatureLabel.setText("Temperatura: " + temperature + "°C");
+                } else {
+                    showError("Brak danych o temperaturze.");
+                }
+
+                if (currentObject.has("condition") && !currentObject.get("condition").isJsonNull()) {
+                    String weatherDescription = currentObject.getAsJsonObject("condition").get("text").getAsString();
+                    weatherLabel.setText("Pogoda: " + weatherDescription);
+                } else {
+                    showError("Brak danych o warunkach pogodowych.");
+                }
+            } else {
+                showError("Brak danych o bieżącej pogodzie.");
+            }
+
+            if (jsonResponseObject.has("current") && !jsonResponseObject.get("current").isJsonNull()) {
+                JsonObject currentObject = jsonResponseObject.getAsJsonObject("current");
+
+                // Wilgotność
+                if (currentObject.has("humidity") && !currentObject.get("humidity").isJsonNull()) {
+                    int humidity = currentObject.get("humidity").getAsInt();
+                    humidityLabel.setText("Wilgotność: " + humidity + "%");
+                } else {
+                    showError("Brak danych o wilgotności.");
+                }
+
+                // Prędkość wiatru
+                if (currentObject.has("wind_kph") && !currentObject.get("wind_kph").isJsonNull()) {
+                    double windSpeed = currentObject.get("wind_kph").getAsDouble();
+                    windSpeedLabel.setText("Wiatr: " + windSpeed + " km/h");
+                } else {
+                    showError("Brak danych o prędkości wiatru.");
+                }
+
+                // Ciśnienie atmosferyczne
+                if (currentObject.has("pressure_mb") && !currentObject.get("pressure_mb").isJsonNull()) {
+                    double pressure = currentObject.get("pressure_mb").getAsDouble();
+                    pressureLabel.setText("Ciśnienie: " + pressure + " hPa");
+                } else {
+                    showError("Brak danych o ciśnieniu.");
+                }
+
+                // Szansa na opady
+                if (currentObject.has("precip_mm") && !currentObject.get("precip_mm").isJsonNull()) {
+                    double precipitation = currentObject.get("precip_mm").getAsDouble();
+                    rainChanceLabel.setText("Opady: " + precipitation + " mm");
+                } else if (currentObject.has("precip_probability") && !currentObject.get("precip_probability").isJsonNull()) {
+                    int rainChance = currentObject.get("precip_probability").getAsInt();
+                    rainChanceLabel.setText("Szansa na opady: " + rainChance + "%");
+                } else {
+                    showError("Brak danych o opadach.");
+                }
+
+            } else {
+                showError("Brak danych o bieżącej pogodzie.");
+            }
+
+
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Błąd podczas pobierania danych pogodowych: " + ex.getMessage());
+        }
     }
 
     // Obsługa błędów
