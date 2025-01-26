@@ -9,6 +9,8 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.HierarchyEvent;
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.ResourceBundle;
@@ -17,7 +19,10 @@ import com.google.gson.JsonObject;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.data.category.DefaultCategoryDataset;
+import org.jfree.data.xy.XYSeries;
+import org.jfree.data.xy.XYSeriesCollection;
 
 public class CMainForm extends JPanel{
     public JPanel mainPanel;
@@ -107,6 +112,28 @@ public class CMainForm extends JPanel{
         chartOptionsPanel.setLayout(new BoxLayout(chartOptionsPanel, BoxLayout.Y_AXIS));
         chartOptionsPanel.setPreferredSize(new Dimension(360, 150));
 
+        daysComboBox.addActionListener(e -> {
+            String selectedDays = (String) daysComboBox.getSelectedItem();
+            int days = Integer.parseInt(selectedDays.split(" ")[0]);
+
+            // Pobieranie prognozy temperatur z API
+            if (apiCommunication != null) {
+                try {
+                    double[] temperatures = apiCommunication.getTemperatureForecast(days);
+                    System.out.println("Temperatures: " + Arrays.toString(temperatures));  // Dodaj logowanie danych
+
+                    String[] dayLabels = generateDayLabels(days); // Generowanie etykiet dni (np. Dzień 1, Dzień 2...)
+
+                    // Rysowanie wykresu
+                    createChart(temperatures, dayLabels);
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                    JOptionPane.showMessageDialog(mainPanel, "Błąd połączenia z API. Spróbuj ponownie.", "Błąd", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
+        /*
         daysLabel.setText("Wybierz kolejne dni do wykresu:");
         String[] forecastDays = new String[]{"3 dni", "5 dni", "8 dni"};
         daysComboBox.setModel(new DefaultComboBoxModel<>(forecastDays));
@@ -119,22 +146,48 @@ public class CMainForm extends JPanel{
         chartOptionsPanel.add(tempHistoryLabel);
         chartOptionsPanel.add(tempHistoryComboBox);
 
-        /*
         daysComboBox.addActionListener(e -> {
             String selectedDays = (String) daysComboBox.getSelectedItem();
             int days = Integer.parseInt(selectedDays.split(" ")[0]);
 
-            // Pobieranie danych dla okreslonej liczny dni
-            double[] temperatures = apiCommunication.getTemperatureForecast(days);
-            String[] daysLabels = generateDayLabels(days);
+            // Pobieranie prognozy temperatur na wybrane dni
+            if (apiCommunication != null) {
+                try {
+                    double[] temperatures = apiCommunication.getTemperatureForecast(days);
+                    System.out.println("Temperatures: " + Arrays.toString(temperatures));  // Dodaj logowanie danych
 
-            // Rysuj wykres
-            createChart(temperatures, daysLabels);
+                    String[] dayLabels = generateDayLabels(days); // Generowanie etykiet dni (np. Dzień 1, Dzień 2...)
+                    System.out.println("Day Labels: " + Arrays.toString(dayLabels));  // Logowanie etykiet dni
+
+                    // Rysowanie wykresu
+                    createChart(temperatures, dayLabels);
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                    JOptionPane.showMessageDialog(mainPanel, "Błąd połączenia z API. Spróbuj ponownie.", "Błąd", JOptionPane.ERROR_MESSAGE);
+                }
+            }
         });
         */
 
+        // Panel z wyszukiwaniem miasta
+        searchPanel.setLayout(new FlowLayout(FlowLayout.CENTER));
+        searchField.setColumns(15);
+        searchButton.setText("Szukaj");
+
+        searchButton.addActionListener(e -> {
+            String city = searchField.getText();
+            if (!city.isEmpty()) {
+                apiCommunication = new ApiCommunication(city);
+                updateWeatherData();
+            }
+        });
+
+        searchPanel.add(searchField);
+        searchPanel.add(searchButton);
+        mainPanel.add(searchPanel, BorderLayout.PAGE_END);
+
         // Wykres zmiany temperatury
-        chartPanel.setPreferredSize(new Dimension(360, 200));
+        chartPanel.setPreferredSize(new Dimension(350, 250));
         chartPanel.setBackground(Color.LIGHT_GRAY);
         chartPanel.setBorder(BorderFactory.createTitledBorder("Wykres temperatury"));
 
@@ -146,62 +199,8 @@ public class CMainForm extends JPanel{
         southPanel.add(chartPanel);
 
         mainPanel.add(southPanel, BorderLayout.SOUTH);
+        mainPanel.add(chartPanel, BorderLayout.SOUTH);
 
-        // Panel do wyszukiwania miasta
-        searchPanel.setLayout(new FlowLayout(FlowLayout.CENTER));
-        searchField.setColumns(15);
-        searchButton.setText("Szukaj");
-
-        // Obsługa przycisku "Szukaj"
-        searchButton.addActionListener(e -> {
-            String city = searchField.getText();
-            if (!city.isEmpty()) {
-                // Tworzenie obiektu ApiCommunication dla podanej lokalizacji
-                apiCommunication = new ApiCommunication(city);
-                updateWeatherData();
-            }
-        });
-
-        searchPanel.add(searchField);
-        searchPanel.add(searchButton);
-
-        mainPanel.add(searchPanel, BorderLayout.PAGE_END);
-    }
-
-    // Metoda do ustawienia pogody dla domyślnego miasta
-    private void setDefaultCityWeather(String city) {
-        cityLabel.setText("Lokalizacja: " + city);
-        apiCommunication = new ApiCommunication(city);  // Użycie ApiCommunication do pobrania danych
-        updateWeatherData();  // Pobranie i wyświetlenie danych pogodowych dla domyślnego miasta
-    }
-
-
-    // metoda do rysowanaia wykresu
-    public void createChart(double[] temperatures, String[] days) {
-        // Tworzenie zbioru danych
-        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
-
-        for (int i = 0; i < temperatures.length; i++) {
-            dataset.addValue(temperatures[i], "Temperatura", days[i]);
-        }
-
-        // Tworzenie wykresu
-        JFreeChart lineChart = ChartFactory.createLineChart(
-                "Wykres temperatury", // Tytuł wykresu
-                "Dni",               // Oś X
-                "Temperatura (°C)",  // Oś Y
-                dataset              // Dane
-        );
-
-        // Panel z wykresem
-        ChartPanel chartPanelComponent = new ChartPanel(lineChart);
-        chartPanelComponent.setPreferredSize(new Dimension(360, 200));
-
-        // Czyszczenie panelu i dodanie wykresu
-        chartPanel.removeAll();
-        chartPanel.add(chartPanelComponent);
-        chartPanel.revalidate();
-        chartPanel.repaint();
     }
 
     // Metoda do aktualizacji pogody na podstawie WeatherData
@@ -282,6 +281,60 @@ public class CMainForm extends JPanel{
             ex.printStackTrace();
             JOptionPane.showMessageDialog(null, "Błędna nazwa miasta!");
         }
+    }
+
+    private String[] generateDayLabels(int days) {
+        String[] labels = new String[days];
+        for (int i = 0; i < days; i++) {
+            labels[i] = "Dzień " + (i + 1);  // Możesz tutaj dodać bardziej zaawansowane etykiety z datami
+        }
+        return labels;
+    }
+
+    // Metoda dodająca wykres do GUI
+    private void createChart(double[] temperatures, String[] days) {
+        // Sprawdzamy dane przed rysowaniem wykresu
+        System.out.println("Temperatures: " + Arrays.toString(temperatures));  // Sprawdzenie danych
+        System.out.println("Days: " + Arrays.toString(days));  // Sprawdzenie dni
+
+        // Tworzymy dane do wykresu
+        XYSeriesCollection dataset = new XYSeriesCollection();
+        XYSeries series = new XYSeries("Temperatures");
+
+        // Dodawanie danych do wykresu
+        for (int i = 0; i < temperatures.length; i++) {
+            series.add(i, temperatures[i]);
+        }
+        dataset.addSeries(series);
+
+        // Tworzymy wykres
+        JFreeChart chart = ChartFactory.createXYLineChart(
+                "Temperature Chart",   // Tytuł wykresu
+                "Days",                // Etykieta osi X
+                "Temperature (°C)",    // Etykieta osi Y
+                dataset,               // Dane
+                PlotOrientation.VERTICAL, // Orientacja wykresu
+                true,                  // Legenda
+                true,                  // Tooltips
+                false                  // URLs
+        );
+
+        // Tworzymy ChartPanel i dodajemy go do chartPanel w CMainForm
+        ChartPanel chartPanelInstance = new ChartPanel(chart);
+
+        // Użycie GridBagConstraints do dodania wykresu do panelu
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.fill = GridBagConstraints.BOTH;  // Ustawienie wypełnienia
+        gbc.weightx = 1.0;
+        gbc.weighty = 1.0;
+
+        this.chartPanel.removeAll();  // Usuwamy poprzedni wykres
+        this.chartPanel.setLayout(new GridBagLayout());  // Ustawienie layoutu GridBagLayout
+        this.chartPanel.add(chartPanelInstance, gbc);  // Dodanie wykresu do panelu z użyciem GridBagConstraints
+        this.chartPanel.revalidate();  // Odświeżamy układ panelu
+        this.chartPanel.repaint();     // Rysowanie panelu
     }
 
     // Obsługa błędów

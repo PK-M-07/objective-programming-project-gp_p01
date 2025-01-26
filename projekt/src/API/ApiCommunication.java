@@ -182,6 +182,28 @@ public class ApiCommunication{
         return JsonParser.parseString(jsonResponse).getAsJsonObject();
     }
 
+    // Metoda do pobierania prognozy temperatury na kolejne 'n' dni
+    public double[] getTemperatureForecast(int days) throws IOException, JsonSyntaxException {
+        // Pobierz prognozę pogody na 'days' dni
+        JsonObject forecastWeather = getForecastWeather(days);
+
+        // Inicjalizujemy tablicę do przechowywania temperatur
+        double[] temperatures = new double[days];
+
+        // Parsujemy dane o temperaturze z odpowiedzi API
+        JsonObject forecast = forecastWeather.getAsJsonObject("forecast");
+        for (int i = 0; i < days; i++) {
+            // Pobieramy dane dla konkretnego dnia (w formacie API jest to lista na podstawie daty)
+            JsonObject dayForecast = forecast.getAsJsonArray("forecastday").get(i).getAsJsonObject();
+            JsonObject day = dayForecast.getAsJsonObject("day");
+
+            // Zapisujemy temperaturę w tablicy
+            temperatures[i] = day.get("avgtemp_c").getAsDouble();
+        }
+
+        return temperatures;
+    }
+
     // Pobieranie danych o historii
     public JsonObject getHistoryWeather() throws IOException, JsonSyntaxException {
         URL url = new URL(getWeatherUrl("history.json") + "&dt=" + date);
