@@ -1,12 +1,13 @@
 import Interface.CMainForm;
 import javax.swing.*;
 
+/**
+ * Metoda główna uruchamiająca aplikację.
+ */
 public class Main {
     public static void main(String[] args) {
         JFrame frame = new JFrame("Weather App");
 
-        // Ustawienie zawartości okna na główny panel z klasy interface
-        // instancja klasy CMainForm
         CMainForm form = new CMainForm();
         frame.setContentPane(new CMainForm().mainPanel);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

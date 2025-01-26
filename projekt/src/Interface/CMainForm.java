@@ -1,14 +1,10 @@
 package Interface;
 
 import API.ApiCommunication;
-import API.WeatherData;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
+import org.jfree.chart.axis.*;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.HierarchyEvent;
+import java.awt.geom.Ellipse2D;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -19,11 +15,11 @@ import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.plot.PlotOrientation;
-import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 
-public class CMainForm extends JPanel{
+
+public class CMainForm extends JPanel {
     public JPanel mainPanel;
     private JLabel cityLabel;
     private JLabel temperatureLabel;
@@ -47,14 +43,15 @@ public class CMainForm extends JPanel{
     private Image background;
 
     private ApiCommunication apiCommunication;
-    //private WeatherData weatherData;
 
+    /**
+     * Konstruktor głównego formularza.
+     * Inicjalizuje komponenty interfejsu oraz ustawia layout.
+     */
     public CMainForm() {
-        // Inicjalizacja apiCommunication i innych komponentów
         apiCommunication = new ApiCommunication("Krakow Polska");
         ResourceBundle bundle = ResourceBundle.getBundle("messages");
 
-        // Ustawienie tekstów z pliku zasobów
         cityLabel.setText(bundle.getString("cityLabel"));
         temperatureLabel.setText(bundle.getString("temperatureLabel"));
         weatherLabel.setText(bundle.getString("weatherLabel"));
@@ -83,13 +80,13 @@ public class CMainForm extends JPanel{
         weatherDataPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 10));
         weatherDataPanel.setPreferredSize(new Dimension(360, 200));
 
-        humidityLabel.setText("Wilgotność: 55%");
+        humidityLabel.setText("Wilgotność: ...%");
         humidityLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 0, 10));
-        pressureLabel.setText("Ciśnienie: 1010 hPa");
+        pressureLabel.setText("Ciśnienie: ... hPa");
         pressureLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 0, 10));
-        windSpeedLabel.setText("Wiatr: 4 m/s");
+        windSpeedLabel.setText("Wiatr: ... m/s");
         windSpeedLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-        rainChanceLabel.setText("Szansa na opady: 0%");
+        rainChanceLabel.setText("Szansa na opady: ...%");
         rainChanceLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
 
         weatherDataPanel.add(humidityLabel);
@@ -107,6 +104,10 @@ public class CMainForm extends JPanel{
         String[] forecastDays = new String[]{"3 dni", "5 dni", "8 dni"};
         daysComboBox.setModel(new DefaultComboBoxModel<>(forecastDays));
 
+        // Ustawienie koloru tła na biały dla ComboBox
+        daysComboBox.setBackground(Color.WHITE);
+
+
         daysComboBox.addActionListener(e -> {
             String selectedDays = (String) daysComboBox.getSelectedItem();
             int days = Integer.parseInt(selectedDays.split(" ")[0]);
@@ -115,10 +116,10 @@ public class CMainForm extends JPanel{
             if (apiCommunication != null) {
                 try {
                     double[] temperatures = apiCommunication.getTemperatureForecast(days);
-                    System.out.println("Temperatures: " + Arrays.toString(temperatures));
+                    System.out.println("Temperatura: " + Arrays.toString(temperatures));
 
                     String[] dayLabels = generateDayLabels(days);
-                    System.out.println("Day Labels: " + Arrays.toString(dayLabels));
+                    System.out.println("Dzień: " + Arrays.toString(dayLabels));
 
                     // Rysowanie wykresu
                     createChart(temperatures, dayLabels);
@@ -156,9 +157,10 @@ public class CMainForm extends JPanel{
 
         // Panel wykresu (panel, który zawiera wykres i opcje)
         chartPanel.setPreferredSize(new Dimension(500, 400));
-        chartPanel.setBackground(Color.LIGHT_GRAY);
-        chartPanel.setBorder(BorderFactory.createTitledBorder("Wykres temperatury"));
+        chartPanel.setBackground(Color.WHITE);
+        chartPanel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
         mainPanel.add(chartPanel);
+
 
         // Panel do wyszukiwania miasta
         searchPanel.setLayout(new FlowLayout(FlowLayout.CENTER));
@@ -180,7 +182,10 @@ public class CMainForm extends JPanel{
     }
 
 
-    // Metoda do aktualizacji pogody na podstawie WeatherData
+    /**
+     * Metoda do aktualizacji pogody na podstawie WeatherData.
+     * Pobiera dane o aktualnej pogodzie z API i aktualizuje odpowiednie etykiety.
+     */
     private void updateWeatherData() {
         try {
             // Pobieranie danych o aktualnej pogodzie
@@ -260,56 +265,29 @@ public class CMainForm extends JPanel{
         }
     }
 
+    /**
+     * Metoda do generowania etykiet dni w oparciu o liczbę dni.
+     * @param days Liczba dni, dla których mają zostać wygenerowane etykiety.
+     * @return Tablica z etykietami dni.
+     */
     private String[] generateDayLabels(int days) {
         String[] labels = new String[days];
         for (int i = 0; i < days; i++) {
-            // Generowanie daty: np. Dzień 1, Dzień 2...
-            labels[i] = "Dzień " + (i + 1) + " (" + getDateForDay(i) + ")";
+            labels[i] = getDateForDay(i);
         }
         return labels;
     }
-
     private String getDateForDay(int dayIndex) {
-        // Tu możesz dodać odpowiednią logikę, aby zwrócić datę dla danego dnia
-        // Może to być np. prosta data bazująca na dacie dzisiejszej:
         Calendar calendar = Calendar.getInstance();
         calendar.add(Calendar.DAY_OF_YEAR, dayIndex);
-        return new SimpleDateFormat("dd/MM").format(calendar.getTime());
+        return new SimpleDateFormat("dd-MM").format(calendar.getTime()); // Użycie formatu DD-MM
     }
 
 
-    // Metoda dodająca wykres do GUI
-    private void createChart(double[] temperatures, String[] days) {
-        XYSeriesCollection dataset = new XYSeriesCollection();
-        XYSeries series = new XYSeries("Temperatures");
-
-        for (int i = 0; i < temperatures.length; i++) {
-            series.add(i, temperatures[i]);
-        }
-        dataset.addSeries(series);
-
-        JFreeChart chart = ChartFactory.createXYLineChart(
-                "Temperature Chart",   // Tytuł wykresu
-                "Days",                // Etykieta osi X
-                "Temperature (°C)",    // Etykieta osi Y
-                dataset,               // Dane
-                PlotOrientation.VERTICAL, // Orientacja wykresu
-                true,                  // Legenda
-                true,                  // Tooltips
-                false                  // URLs
-        );
-        ChartPanel chartPanelInstance = new ChartPanel(chart);
-        this.chartPanel.removeAll();  // Usuwanie poprzedniego wykresu
-        this.chartPanel.setLayout(new BorderLayout());
-        this.chartPanel.add(chartPanelInstance, BorderLayout.CENTER);
-        this.chartPanel.revalidate();  // Odświeżenie układu
-        this.chartPanel.repaint();     // Rysowanie wykresu
-        mainPanel.revalidate();  // Sprawdź, czy panel musi zostać zwalidowany
-        mainPanel.repaint();
-    }
-
-
-    // Obsługa błędów
+    /**
+     * Metoda do wyświetlania komunikatu o błędzie.
+     * @param message Wiadomość błędu do wyświetlenia.
+     */
     private void showError(String message) {
         SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainPanel, message, "Błąd", JOptionPane.ERROR_MESSAGE));
     }
@@ -318,56 +296,74 @@ public class CMainForm extends JPanel{
         return mainPanel;
     }
 
-    // Automatyczne pobieranie danych i aktualizacja etykiet
-    private void startAutoUpdate() {
-        timer = new Timer();
-
-        // Zadanie wykonywane co 5 sekund
-        TimerTask updateTask = new TimerTask() {
-            @Override
-            public void run() {
-                try {
-                    String city = getCityFromCoordinates(); // Pobranie nowej lokalizacji
-                    String newTemperature = getTemperature(); // Pobranie nowej temperatury
-                    apiCommunication = new ApiCommunication(city);
-
-                    /*
-                    // Pobierz dane z API
-                    String jsonResponse = apiCommunication.getCurrentWeather();
-                    ObjectMapper objectMapper = new ObjectMapper();
-                    WeatherData weatherData = objectMapper.readValue(jsonResponse, WeatherData.class);
-
-                    // Aktualizacja etykiet
-                    SwingUtilities.invokeLater(() -> updateWeatherData(weatherData));
-
-                    */
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        };
-
-        // Uruchomienie timera: 0 ms opóźnienia, aktualizacja co 5 sekund
-        timer.schedule(updateTask, 0, 5000);
-    }
-
-    // pobieranie nazwy miasta
-    private String getCityFromCoordinates() {
-        // pobieranie z API
-        return "Warszawa";
-    }
-
-    // pobieranie temperatury
-    private String getTemperature() {
-        // pobieranie z API
-        return String.valueOf((int) (Math.random() * 10 + 10));
-    }
 
     // Zatrzymanie automatycznej aktualizacji przy zamknięciu okna
     public void stopAutoUpdate() {
         if (timer != null) {
             timer.cancel();
         }
+    }
+
+    /**
+     * Metoda do tworzenia wykresu na podstawie danych o temperaturze.
+     * @param temperatures Tablica temperatur.
+     * @param days Tablica etykiet dni.
+     */
+    private void createChart(double[] temperatures, String[] days) {
+        // Utworzenie zbioru danych
+        XYSeriesCollection dataset = new XYSeriesCollection();
+        XYSeries series = new XYSeries("Temperatures");
+
+        // Dodanie temperatur do serii
+        for (int i = 0; i < temperatures.length; i++) {
+            // Użyj milisekund od 1970 jako wartości X
+            series.add(getDateForIndex(i).getTime(), temperatures[i]);
+        }
+        dataset.addSeries(series);
+
+        // Utworzenie wykresu
+        JFreeChart chart = ChartFactory.createXYLineChart(
+                null,   // Brak tytułu wykresu
+                "Data (DD-MM)",   // Etykieta osi X
+                "Temperatura (°C)",   // Etykieta osi Y
+                dataset, // Dane
+                PlotOrientation.VERTICAL, // Orientacja wykresu
+                false,  // Brak legendy
+                true,   // Włącz tooltips
+                false   // Brak URL
+        );
+
+        // Ustawienie koloru linii wykresu
+        chart.getXYPlot().getRenderer().setSeriesPaint(0, new Color(0, 191, 255)); // Błękitna linia
+        chart.getXYPlot().setBackgroundPaint(Color.WHITE); // Zmiana koloru tła wykresu na biały
+
+        // Ustawienie kształtu punktów na linii temperatury
+        chart.getXYPlot().getRenderer().setSeriesShape(0, new Ellipse2D.Double(-3, -3, 6, 6)); // Okrąg jako punkt
+
+        // Ustawienie osi X jako DateAxis
+        DateAxis domainAxis = new DateAxis();
+        domainAxis.setDateFormatOverride(new SimpleDateFormat("dd-MM")); // Ustawienie formatu etykiet
+        domainAxis.setLowerBound(getDateForIndex(0).getTime());
+        domainAxis.setUpperBound(getDateForIndex(temperatures.length - 1).getTime());
+
+        // Przypisanie DateAxis do wykresu
+        chart.getXYPlot().setDomainAxis(domainAxis);
+
+        // Utworzenie panelu wykresu
+        ChartPanel chartPanelInstance = new ChartPanel(chart);
+        this.chartPanel.removeAll();  // Usuwanie poprzedniego wykresu
+        this.chartPanel.setLayout(new BorderLayout());
+        this.chartPanel.add(chartPanelInstance, BorderLayout.CENTER);
+        this.chartPanel.revalidate();  // Odświeżenie układu
+        this.chartPanel.repaint();     // Rysowanie wykresu
+    }
+
+
+    // Metoda do generowania daty dla indeksu
+    private Date getDateForIndex(int index) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DAY_OF_YEAR, index); // Dodajemy dni do bieżącej daty
+        return calendar.getTime();
     }
 
 }
