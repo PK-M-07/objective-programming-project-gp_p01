@@ -87,11 +87,11 @@ public class CMainForm extends JPanel{
 
         humidityLabel.setText("Wilgotność: 55%");
         humidityLabel.setBorder(BorderFactory.createEmptyBorder(50, 10, 0, 10));
-        pressureLabel.setText("Ciśnienie: 1013 hPa");
+        pressureLabel.setText("Ciśnienie: 1010 hPa");
         pressureLabel.setBorder(BorderFactory.createEmptyBorder(50, 10, 0, 10));
-        windSpeedLabel.setText("Wiatr: 10 km/h N");
+        windSpeedLabel.setText("Wiatr: 4 m/s");
         windSpeedLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-        rainChanceLabel.setText("Szansa na opady: 40%");
+        rainChanceLabel.setText("Szansa na opady: 0%");
         rainChanceLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
 
         weatherDataPanel.add(humidityLabel);
@@ -168,6 +168,14 @@ public class CMainForm extends JPanel{
         mainPanel.add(searchPanel, BorderLayout.PAGE_END);
     }
 
+    // Metoda do ustawienia pogody dla domyślnego miasta
+    private void setDefaultCityWeather(String city) {
+        cityLabel.setText("Lokalizacja: " + city);
+        apiCommunication = new ApiCommunication(city);  // Użycie ApiCommunication do pobrania danych
+        updateWeatherData();  // Pobranie i wyświetlenie danych pogodowych dla domyślnego miasta
+    }
+
+
     // metoda do rysowanaia wykresu
     public void createChart(double[] temperatures, String[] days) {
         // Tworzenie zbioru danych
@@ -219,7 +227,7 @@ public class CMainForm extends JPanel{
             if (jsonResponseObject.has("current") && !jsonResponseObject.get("current").isJsonNull()) {
                 JsonObject currentObject = jsonResponseObject.getAsJsonObject("current");
                 if (currentObject.has("temp_c") && !currentObject.get("temp_c").isJsonNull()) {
-                    double temperature = currentObject.get("temp_c").getAsDouble();
+                    int temperature = currentObject.get("temp_c").getAsInt();
                     temperatureLabel.setText("Temperatura: " + temperature + "°C");
                 } else {
                     showError("Brak danych o temperaturze.");
@@ -231,12 +239,6 @@ public class CMainForm extends JPanel{
                 } else {
                     showError("Brak danych o warunkach pogodowych.");
                 }
-            } else {
-                showError("Brak danych o bieżącej pogodzie.");
-            }
-
-            if (jsonResponseObject.has("current") && !jsonResponseObject.get("current").isJsonNull()) {
-                JsonObject currentObject = jsonResponseObject.getAsJsonObject("current");
 
                 // Wilgotność
                 if (currentObject.has("humidity") && !currentObject.get("humidity").isJsonNull()) {
@@ -276,12 +278,9 @@ public class CMainForm extends JPanel{
             } else {
                 showError("Brak danych o bieżącej pogodzie.");
             }
-
-
-
         } catch (Exception ex) {
             ex.printStackTrace();
-            JOptionPane.showMessageDialog(null, "Błąd podczas pobierania danych pogodowych: " + ex.getMessage());
+            JOptionPane.showMessageDialog(null, "Błędna nazwa miasta!");
         }
     }
 
