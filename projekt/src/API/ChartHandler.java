@@ -13,68 +13,18 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
-public class ChartTest {
+public class ChartHandler {
     private static JFreeChart chart; // Wykres
     private static ChartPanel chartPanel; // Panel wykresu
     private static String city = "Warsaw"; // Nazwa miasta
-    private static JTextField cityInput; // Pole tekstowe do wprowadzania miasta
-
-    public static void main(String[] args) {
-        // Inicjalizacja okna
-        JFrame frame = new JFrame("Wykres temperatur");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(800, 600);
-
-        // Panel do wyświetlania wykresu
-        chartPanel = new ChartPanel(null); // Na początku wykres jest pusty
-        chartPanel.setPreferredSize(new Dimension(750, 500));
-
-        // Panel do przycisków
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setLayout(new FlowLayout());
-
-        // Tworzenie przycisków
-        JButton button3Days = new JButton("3 dni");
-        JButton button5Days = new JButton("5 dni");
-        JButton button8Days = new JButton("8 dni");
-        JButton updateCityButton = new JButton("Zaktualizuj miasto");
-
-        // Pole tekstowe do wprowadzania nazwy miasta
-        cityInput = new JTextField(city, 15); // Domyślnie ustawione na "Warsaw"
-
-        // Dodawanie akcji do przycisków
-        button3Days.addActionListener(e -> updateChart(3));
-        button5Days.addActionListener(e -> updateChart(5));
-        button8Days.addActionListener(e -> updateChart(8));
-        updateCityButton.addActionListener(e -> {
-            city = cityInput.getText(); // Ustawienie nowego miasta
-            updateChart(5); // Aktualizacja wykresu na 5 dni
-        });
-
-        // Dodawanie przycisków i pola tekstowego do panelu
-        buttonPanel.add(cityInput);
-        buttonPanel.add(updateCityButton);
-        buttonPanel.add(button3Days);
-        buttonPanel.add(button5Days);
-        buttonPanel.add(button8Days);
-
-        // Dodawanie komponentów do ramki
-        frame.getContentPane().add(chartPanel, BorderLayout.CENTER);
-        frame.getContentPane().add(buttonPanel, BorderLayout.SOUTH);
-
-        // Wyświetlanie okna
-        frame.setVisible(true);
-
-        // Inicjalne załadowanie wykresu
-        updateChart(5); // Domyślnie 5 dni
-    }
 
     /**
-     * Aktualizuje wykres na podstawie liczby dni prognozy.
+     * Tworzy wykres i dodaje go do panelu w głównym formularzu.
      *
-     * @param forecastDays liczba dni prognozy
+     * @param mainPanel Panel, do którego zostanie dodany wykres.
+     * @param forecastDays Liczba dni prognozy.
      */
-    private static void updateChart(int forecastDays) {
+    public static void createChartAndAddToPanel(JPanel mainPanel, int forecastDays) {
         try {
             // Inicjalizacja komunikacji z API
             ApiCommunication api = new ApiCommunication(city);
@@ -85,6 +35,12 @@ public class ChartTest {
 
             // Tworzenie wykresu
             createTemperatureChart(temperatures, dates);
+
+            // Dodanie wykresu do panelu
+            mainPanel.removeAll(); // Usuwamy wszystko z panelu (jeśli coś było wcześniej)
+            mainPanel.add(chartPanel, BorderLayout.CENTER); // Dodajemy wykres
+            mainPanel.revalidate(); // Odświeżamy panel
+            mainPanel.repaint(); // Rysujemy ponownie panel
         } catch (IOException e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(null, "Błąd podczas pobierania danych z API: " + e.getMessage(),
@@ -109,6 +65,7 @@ public class ChartTest {
         }
         return dateLabels;
     }
+
     /**
      * Tworzy wykres prognozy temperatur.
      *
@@ -148,7 +105,8 @@ public class ChartTest {
 
         plot.setRenderer(renderer);
 
-        // Ustawianie nowego wykresu w panelu
-        chartPanel.setChart(chart);
+        // Tworzenie panelu dla wykresu
+        chartPanel = new ChartPanel(chart);
+        chartPanel.setPreferredSize(new Dimension(750, 500));
     }
 }

@@ -10,10 +10,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.HierarchyEvent;
 import java.io.IOException;
-import java.util.Arrays;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.Timer;
-import java.util.TimerTask;
-import java.util.ResourceBundle;
 
 import com.google.gson.JsonObject;
 import org.jfree.chart.ChartFactory;
@@ -37,14 +36,12 @@ public class CMainForm extends JPanel{
     private JTextField searchField;
     private JButton searchButton;
     private JComboBox<String> daysComboBox;
-    private JComboBox<String> tempHistoryComboBox;
     private Timer timer; // Timer do okresowego odświeżania lokalizacji
     private JPanel weatherDataPanel;
     private JPanel chartOptionsPanel;
     private JPanel chartPanel;
     private JPanel searchPanel;
     private JLabel daysLabel;
-    private JLabel tempHistoryLabel;
     private JLabel chartLabel;
     private JPanel chart;
     private Image background;
@@ -53,23 +50,21 @@ public class CMainForm extends JPanel{
     //private WeatherData weatherData;
 
     public CMainForm() {
+        // Inicjalizacja apiCommunication i innych komponentów
+        apiCommunication = new ApiCommunication("Krakow Polska");
         ResourceBundle bundle = ResourceBundle.getBundle("messages");
-        // Ustawienie tesktów z pliku zasobów
+
+        // Ustawienie tekstów z pliku zasobów
         cityLabel.setText(bundle.getString("cityLabel"));
         temperatureLabel.setText(bundle.getString("temperatureLabel"));
         weatherLabel.setText(bundle.getString("weatherLabel"));
 
-        // Inicjalizacja głównego panelu
-        mainPanel.setLayout(new BorderLayout(10, 10));
-        mainPanel.setPreferredSize(new Dimension(360, 640)); // px
+        // Główny panel i jego layout (FlowLayout lub BoxLayout dla lepszej organizacji)
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+        mainPanel.setPreferredSize(new Dimension(360, 640));  // Szerokość i wysokość okna
         mainPanel.setBackground(new Color(196, 224, 249));
-        topPanel.setBackground(new Color(196, 224, 249));
-        weatherDataPanel.setBackground(new Color(196, 224, 249));
-        chartOptionsPanel.setBackground(new Color(196, 224, 249));
-        chartPanel.setBackground(new Color(196, 224, 249));
-        searchPanel.setBackground(new Color(196, 224, 249));
 
-        // Górny panel z miastem, temperaturą i pogodą
+        // Top Panel (miasto, temperatura, pogoda)
         topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
         topPanel.setBorder(BorderFactory.createEmptyBorder(20, 10, 5, 10));
 
@@ -82,18 +77,16 @@ public class CMainForm extends JPanel{
         topPanel.add(temperatureLabel);
         topPanel.add(Box.createVerticalStrut(5));
         topPanel.add(weatherLabel);
+        mainPanel.add(topPanel);
 
-        // Dodanie do głównego panelu
-        mainPanel.add(topPanel, BorderLayout.NORTH);
-
-        // panel pogodowy: wilgotność, ciśnienie, wiatr, szansa na opady
+        // Panel danych pogodowych (wilgotność, ciśnienie, wiatr, szansa na opady)
         weatherDataPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 10));
         weatherDataPanel.setPreferredSize(new Dimension(360, 200));
 
         humidityLabel.setText("Wilgotność: 55%");
-        humidityLabel.setBorder(BorderFactory.createEmptyBorder(50, 10, 0, 10));
+        humidityLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 0, 10));
         pressureLabel.setText("Ciśnienie: 1010 hPa");
-        pressureLabel.setBorder(BorderFactory.createEmptyBorder(50, 10, 0, 10));
+        pressureLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 0, 10));
         windSpeedLabel.setText("Wiatr: 4 m/s");
         windSpeedLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         rainChanceLabel.setText("Szansa na opady: 0%");
@@ -104,47 +97,15 @@ public class CMainForm extends JPanel{
         weatherDataPanel.add(windSpeedLabel);
         weatherDataPanel.add(rainChanceLabel);
 
-        mainPanel.add(weatherDataPanel, BorderLayout.CENTER);
-        weatherDataPanel.revalidate();
-        weatherDataPanel.repaint();
+        mainPanel.add(weatherDataPanel);
 
-        // Wybór dni do wykresu
+        // Panel opcji wykresu
         chartOptionsPanel.setLayout(new BoxLayout(chartOptionsPanel, BoxLayout.Y_AXIS));
-        chartOptionsPanel.setPreferredSize(new Dimension(360, 150));
+        chartOptionsPanel.setPreferredSize(new Dimension(360, 200));
 
-        daysComboBox.addActionListener(e -> {
-            String selectedDays = (String) daysComboBox.getSelectedItem();
-            int days = Integer.parseInt(selectedDays.split(" ")[0]);
-
-            // Pobieranie prognozy temperatur z API
-            if (apiCommunication != null) {
-                try {
-                    double[] temperatures = apiCommunication.getTemperatureForecast(days);
-                    System.out.println("Temperatures: " + Arrays.toString(temperatures));  // Dodaj logowanie danych
-
-                    String[] dayLabels = generateDayLabels(days); // Generowanie etykiet dni (np. Dzień 1, Dzień 2...)
-
-                    // Rysowanie wykresu
-                    createChart(temperatures, dayLabels);
-                } catch (IOException ex) {
-                    ex.printStackTrace();
-                    JOptionPane.showMessageDialog(mainPanel, "Błąd połączenia z API. Spróbuj ponownie.", "Błąd", JOptionPane.ERROR_MESSAGE);
-                }
-            }
-        });
-
-        /*
         daysLabel.setText("Wybierz kolejne dni do wykresu:");
         String[] forecastDays = new String[]{"3 dni", "5 dni", "8 dni"};
         daysComboBox.setModel(new DefaultComboBoxModel<>(forecastDays));
-        tempHistoryLabel.setText("Wybierz zakres minionych dni:");
-        String[] historyDays = new String[]{"3 dni", "5 dni", "7 dni"};
-        tempHistoryComboBox.setModel(new DefaultComboBoxModel<>(historyDays));
-
-        chartOptionsPanel.add(daysLabel);
-        chartOptionsPanel.add(daysComboBox);
-        chartOptionsPanel.add(tempHistoryLabel);
-        chartOptionsPanel.add(tempHistoryComboBox);
 
         daysComboBox.addActionListener(e -> {
             String selectedDays = (String) daysComboBox.getSelectedItem();
@@ -154,10 +115,10 @@ public class CMainForm extends JPanel{
             if (apiCommunication != null) {
                 try {
                     double[] temperatures = apiCommunication.getTemperatureForecast(days);
-                    System.out.println("Temperatures: " + Arrays.toString(temperatures));  // Dodaj logowanie danych
+                    System.out.println("Temperatures: " + Arrays.toString(temperatures));
 
-                    String[] dayLabels = generateDayLabels(days); // Generowanie etykiet dni (np. Dzień 1, Dzień 2...)
-                    System.out.println("Day Labels: " + Arrays.toString(dayLabels));  // Logowanie etykiet dni
+                    String[] dayLabels = generateDayLabels(days);
+                    System.out.println("Day Labels: " + Arrays.toString(dayLabels));
 
                     // Rysowanie wykresu
                     createChart(temperatures, dayLabels);
@@ -167,9 +128,39 @@ public class CMainForm extends JPanel{
                 }
             }
         });
-        */
 
-        // Panel z wyszukiwaniem miasta
+        chartOptionsPanel.add(daysLabel);
+        chartOptionsPanel.add(daysComboBox);
+
+        // Dodajemy przycisk do rysowania wykresu
+        JButton drawChartButton = new JButton("Rysuj wykres");
+        drawChartButton.addActionListener(e -> {
+            String selectedDays = (String) daysComboBox.getSelectedItem();
+            int days = Integer.parseInt(selectedDays.split(" ")[0]);
+
+            // Pobieranie temperatur na wybrane dni i rysowanie wykresu
+            if (apiCommunication != null) {
+                try {
+                    double[] temperatures = apiCommunication.getTemperatureForecast(days);
+                    String[] dayLabels = generateDayLabels(days);
+                    createChart(temperatures, dayLabels);
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                    JOptionPane.showMessageDialog(mainPanel, "Błąd połączenia z API. Spróbuj ponownie.", "Błąd", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+        chartOptionsPanel.add(drawChartButton);
+
+        mainPanel.add(chartOptionsPanel);
+
+        // Panel wykresu (panel, który zawiera wykres i opcje)
+        chartPanel.setPreferredSize(new Dimension(500, 400));
+        chartPanel.setBackground(Color.LIGHT_GRAY);
+        chartPanel.setBorder(BorderFactory.createTitledBorder("Wykres temperatury"));
+        mainPanel.add(chartPanel);
+
+        // Panel do wyszukiwania miasta
         searchPanel.setLayout(new FlowLayout(FlowLayout.CENTER));
         searchField.setColumns(15);
         searchButton.setText("Szukaj");
@@ -184,24 +175,10 @@ public class CMainForm extends JPanel{
 
         searchPanel.add(searchField);
         searchPanel.add(searchButton);
-        mainPanel.add(searchPanel, BorderLayout.PAGE_END);
-
-        // Wykres zmiany temperatury
-        chartPanel.setPreferredSize(new Dimension(350, 250));
-        chartPanel.setBackground(Color.LIGHT_GRAY);
-        chartPanel.setBorder(BorderFactory.createTitledBorder("Wykres temperatury"));
-
-        // panel, który zawiera opcje i wykres
-        JPanel southPanel = new JPanel();
-        southPanel.setLayout(new BoxLayout(southPanel, BoxLayout.Y_AXIS)); // Układ pionowy
-        southPanel.add(chartOptionsPanel);
-        southPanel.add(Box.createVerticalStrut(10));
-        southPanel.add(chartPanel);
-
-        mainPanel.add(southPanel, BorderLayout.SOUTH);
-        mainPanel.add(chartPanel, BorderLayout.SOUTH);
-
+        mainPanel.add(searchPanel);
+        this.add(mainPanel);
     }
+
 
     // Metoda do aktualizacji pogody na podstawie WeatherData
     private void updateWeatherData() {
@@ -286,28 +263,31 @@ public class CMainForm extends JPanel{
     private String[] generateDayLabels(int days) {
         String[] labels = new String[days];
         for (int i = 0; i < days; i++) {
-            labels[i] = "Dzień " + (i + 1);  // Możesz tutaj dodać bardziej zaawansowane etykiety z datami
+            // Generowanie daty: np. Dzień 1, Dzień 2...
+            labels[i] = "Dzień " + (i + 1) + " (" + getDateForDay(i) + ")";
         }
         return labels;
     }
 
+    private String getDateForDay(int dayIndex) {
+        // Tu możesz dodać odpowiednią logikę, aby zwrócić datę dla danego dnia
+        // Może to być np. prosta data bazująca na dacie dzisiejszej:
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DAY_OF_YEAR, dayIndex);
+        return new SimpleDateFormat("dd/MM").format(calendar.getTime());
+    }
+
+
     // Metoda dodająca wykres do GUI
     private void createChart(double[] temperatures, String[] days) {
-        // Sprawdzamy dane przed rysowaniem wykresu
-        System.out.println("Temperatures: " + Arrays.toString(temperatures));  // Sprawdzenie danych
-        System.out.println("Days: " + Arrays.toString(days));  // Sprawdzenie dni
-
-        // Tworzymy dane do wykresu
         XYSeriesCollection dataset = new XYSeriesCollection();
         XYSeries series = new XYSeries("Temperatures");
 
-        // Dodawanie danych do wykresu
         for (int i = 0; i < temperatures.length; i++) {
             series.add(i, temperatures[i]);
         }
         dataset.addSeries(series);
 
-        // Tworzymy wykres
         JFreeChart chart = ChartFactory.createXYLineChart(
                 "Temperature Chart",   // Tytuł wykresu
                 "Days",                // Etykieta osi X
@@ -318,24 +298,16 @@ public class CMainForm extends JPanel{
                 true,                  // Tooltips
                 false                  // URLs
         );
-
-        // Tworzymy ChartPanel i dodajemy go do chartPanel w CMainForm
         ChartPanel chartPanelInstance = new ChartPanel(chart);
-
-        // Użycie GridBagConstraints do dodania wykresu do panelu
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.fill = GridBagConstraints.BOTH;  // Ustawienie wypełnienia
-        gbc.weightx = 1.0;
-        gbc.weighty = 1.0;
-
-        this.chartPanel.removeAll();  // Usuwamy poprzedni wykres
-        this.chartPanel.setLayout(new GridBagLayout());  // Ustawienie layoutu GridBagLayout
-        this.chartPanel.add(chartPanelInstance, gbc);  // Dodanie wykresu do panelu z użyciem GridBagConstraints
-        this.chartPanel.revalidate();  // Odświeżamy układ panelu
-        this.chartPanel.repaint();     // Rysowanie panelu
+        this.chartPanel.removeAll();  // Usuwanie poprzedniego wykresu
+        this.chartPanel.setLayout(new BorderLayout());
+        this.chartPanel.add(chartPanelInstance, BorderLayout.CENTER);
+        this.chartPanel.revalidate();  // Odświeżenie układu
+        this.chartPanel.repaint();     // Rysowanie wykresu
+        mainPanel.revalidate();  // Sprawdź, czy panel musi zostać zwalidowany
+        mainPanel.repaint();
     }
+
 
     // Obsługa błędów
     private void showError(String message) {
