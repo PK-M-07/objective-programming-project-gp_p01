@@ -110,7 +110,6 @@ public class ChartTest {
 
         return dateLabels;
     }
-
     /**
      * Tworzy wykres prognozy temperatur.
      *
