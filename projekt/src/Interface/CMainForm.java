@@ -8,6 +8,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.HierarchyEvent;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.ResourceBundle;
@@ -18,7 +19,7 @@ import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.data.category.DefaultCategoryDataset;
 
-public class CMainForm {
+public class CMainForm extends JPanel{
     public JPanel mainPanel;
     private JLabel cityLabel;
     private JLabel temperatureLabel;
@@ -41,14 +42,13 @@ public class CMainForm {
     private JLabel tempHistoryLabel;
     private JLabel chartLabel;
     private JPanel chart;
+    private Image background;
 
     private ApiCommunication apiCommunication;
     //private WeatherData weatherData;
 
     public CMainForm() {
-        //weatherData = new WeatherData();  // inicjalizacja klasy z API
         ResourceBundle bundle = ResourceBundle.getBundle("messages");
-
         // Ustawienie tesktów z pliku zasobów
         cityLabel.setText(bundle.getString("cityLabel"));
         temperatureLabel.setText(bundle.getString("temperatureLabel"));
@@ -57,6 +57,12 @@ public class CMainForm {
         // Inicjalizacja głównego panelu
         mainPanel.setLayout(new BorderLayout(10, 10));
         mainPanel.setPreferredSize(new Dimension(360, 640)); // px
+        mainPanel.setBackground(new Color(196, 224, 249));
+        topPanel.setBackground(new Color(196, 224, 249));
+        weatherDataPanel.setBackground(new Color(196, 224, 249));
+        chartOptionsPanel.setBackground(new Color(196, 224, 249));
+        chartPanel.setBackground(new Color(196, 224, 249));
+        searchPanel.setBackground(new Color(196, 224, 249));
 
         // Górny panel z miastem, temperaturą i pogodą
         topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
