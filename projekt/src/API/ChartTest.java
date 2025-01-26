@@ -107,7 +107,6 @@ public class ChartTest {
             LocalDate date = today.plusDays(i); // Kolejne dni
             dateLabels[i] = date.format(formatter); // Formatowanie daty do czytelnego formatu
         }
-
         return dateLabels;
     }
     /**
